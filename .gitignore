@@ -11,3 +11,8 @@ build/
 
 # mypy
 .mypy_cache/
+
+# Node / TypeScript
+node_modules/
+dist/
+*.tsbuildinfo
