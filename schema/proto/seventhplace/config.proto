@@ -1,0 +1,102 @@
+// Golden Schema — the single source of truth for all configuration.
+//
+// This file defines the typed structure, field numbering, defaults,
+// constraints, and documentation for every configuration knob.
+//
+// From this file, the build pipeline generates:
+//   - Protobuf stubs for each language (protoc)
+//   - JSON Schema for editor support and CI validation
+//   - Per-language typed config classes with defaults baked in
+//   - Documentation
+
+syntax = "proto3";
+
+package seventhplace;
+
+import "seventhplace/options.proto";
+
+option go_package = "github.com/7thplacenw/config/schemapb";
+
+// Top-level application configuration.
+message AppConfig {
+  optional string app_name = 1 [(config) = {
+    default_value: "7thplace",
+    description:   "Application identifier used in logging and metrics"
+  }];
+
+  optional Environment env = 2 [(config) = {
+    default_value: "PRODUCTION",
+    description:   "Deployment environment"
+  }];
+
+  optional AlgoConfig    algo    = 3;
+  optional DbConfig      db      = 4;
+  optional SecretsConfig secrets = 5;
+}
+
+// Deployment environment.
+enum Environment {
+  DEV        = 0;
+  STAGING    = 1;
+  PRODUCTION = 2;
+}
+
+// Algorithm-level configuration — the "knobs" engineers turn.
+// These are the named constants that replace magic numbers.
+message AlgoConfig {
+  optional float friction = 1 [(config) = {
+    default_value: "0.85",
+    min:           "0.0",
+    max:           "1.0",
+    description:   "Energy loss coefficient per iteration"
+  }];
+
+  optional int32 max_retries = 2 [(config) = {
+    default_value: "3",
+    min:           "0",
+    description:   "Maximum retry attempts before failure"
+  }];
+
+  optional int32 timeout_ms = 3 [(config) = {
+    default_value: "5000",
+    min:           "1",
+    description:   "Operation timeout in milliseconds"
+  }];
+
+  optional float threshold = 4 [(config) = {
+    default_value: "0.65",
+    min:           "0.0",
+    max:           "1.0",
+    description:   "Convergence threshold for iterative algorithms"
+  }];
+}
+
+// Database connection configuration.
+message DbConfig {
+  optional string host = 1 [(config) = {
+    default_value: "localhost",
+    description:   "Database server hostname"
+  }];
+
+  optional int32 port = 2 [(config) = {
+    default_value: "5432",
+    min:           "1",
+    max:           "65535",
+    description:   "Database server port"
+  }];
+
+  optional int32 pool_size = 3 [(config) = {
+    default_value: "10",
+    min:           "1",
+    description:   "Connection pool size"
+  }];
+}
+
+// Sensitive configuration — secrets and credentials.
+message SecretsConfig {
+  optional string api_key = 1 [(config) = {
+    default_value: "",
+    sensitive:     true,
+    description:   "API authentication key"
+  }];
+}

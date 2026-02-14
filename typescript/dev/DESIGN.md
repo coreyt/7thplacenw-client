@@ -189,10 +189,44 @@ SeventhPlaceError
 Zod errors are reformatted to show `field.path: expected type` without
 raw values.
 
+## Bridge Integration
+
+### JSON Bridge (Default)
+
+YAML/JSON files are parsed via `yaml.parse()` into plain objects and
+fed directly into the merge pipeline. This is the default path.
+
+### Protobuf Bridge (Optional)
+
+When `@bufbuild/protobuf` is available, the library accepts protobuf
+binary bytes. The flow:
+
+```typescript
+import { AppConfig } from "./generated/config_pb.js";
+import { fromBinary } from "@bufbuild/protobuf";
+
+const msg = fromBinary(AppConfigSchema, protoBytes);
+const override = protoToDict(msg); // respects field presence
+```
+
+`protoToDict()` checks `isFieldSet()` to handle the proto3 zero-value
+problem (see `dev/GOLDEN_SCHEMA.md`).
+
+The protobuf dependency is a peer dependency — not required for
+local-only usage.
+
+### Schema Generation
+
+The Golden Schema generates:
+
+- `src/generated/config_pb.ts` — protobuf stubs (via `buf generate`)
+- Zod schemas can optionally be generated from `FieldMeta` annotations.
+
 ## Packaging
 
 Published to npm as `@seventhplace/config`. Dual ESM/CJS via `tsup`.
 
 ```
 npm install @seventhplace/config
+npm install @bufbuild/protobuf     # optional: proto bridge support
 ```

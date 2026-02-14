@@ -198,10 +198,44 @@ SeventhPlaceException
 Validation errors include the property path and constraint description.
 `[Sensitive]` values are never included in exception messages.
 
+## Bridge Integration
+
+### JSON Bridge (Default)
+
+JSON/YAML files are consumed natively by `ConfigurationBuilder`. The
+.NET ecosystem provides this out of the box.
+
+### Protobuf Bridge (Optional)
+
+When `Google.Protobuf` is referenced, the library accepts protobuf
+binary from the control-plane. The flow:
+
+```csharp
+var msg = AppConfig.Parser.ParseFrom(protoBytes);
+var overrides = ProtoToDictionary(msg); // respects HasField
+builder.AddInMemoryCollection(overrides);
+```
+
+`ProtoToDictionary()` uses the protobuf reflection API
+(`msg.Descriptor.Fields`) and `HasField()` to extract only
+explicitly-set fields, handling the proto3 zero-value problem
+(see `dev/GOLDEN_SCHEMA.md`).
+
+The `Google.Protobuf` dependency is optional — a separate NuGet
+package `SeventhPlace.Config.Proto` provides the bridge.
+
+### Schema Generation
+
+The Golden Schema generates:
+
+- `Generated/ConfigProto.cs` — protobuf C# stubs (via `protoc --csharp_out`)
+- Record types can optionally be generated from `FieldMeta` annotations.
+
 ## Packaging
 
 Published to NuGet as `SeventhPlace.Config`:
 
 ```
 dotnet add package SeventhPlace.Config
+dotnet add package SeventhPlace.Config.Proto  # optional: proto bridge
 ```

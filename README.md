@@ -20,6 +20,7 @@ strongly-typed config object.
 
 ```
 dev/                    Architecture & cross-language design docs
+schema/proto/           Golden Schema (annotated proto3 — source of truth)
 test/                   Compliance spec & shared test fixtures
 python/                 Python client (Pydantic + PyYAML)
 typescript/             TypeScript client (zod + js-yaml)
@@ -32,7 +33,9 @@ cpp/                    C++ client (nlohmann/json + yaml-cpp)
 
 | Document                       | Purpose                               |
 |--------------------------------|---------------------------------------|
-| [dev/ARCHITECTURE.md](dev/ARCHITECTURE.md) | Core architecture & API contract |
+| [dev/ARCHITECTURE.md](dev/ARCHITECTURE.md) | Core architecture & three-tier design |
+| [dev/GOLDEN_SCHEMA.md](dev/GOLDEN_SCHEMA.md) | Golden Schema + trade-off analysis |
+| [dev/BRIDGE.md](dev/BRIDGE.md)             | JSON & Protobuf bridge specs |
 | [dev/PORTABILITY.md](dev/PORTABILITY.md)   | Cross-language implementation matrix |
 | [test/COMPLIANCE.md](test/COMPLIANCE.md)   | Behavioral test specification (TC-01..TC-18) |
 | `<lang>/dev/DESIGN.md`        | Language-specific high-level design   |

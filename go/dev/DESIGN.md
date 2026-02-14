@@ -178,6 +178,39 @@ Errors are wrapped with `fmt.Errorf("...: %w", err)` for `errors.Is()`
 and `errors.As()` compatibility. Validation errors include field path
 and expected type.
 
+## Bridge Integration
+
+### JSON Bridge (Default)
+
+YAML/JSON files are parsed via `yaml.v3` into `map[string]any` and fed
+directly into the merge pipeline.
+
+### Protobuf Bridge (Built-in)
+
+Go has first-class protobuf support via `google.golang.org/protobuf`.
+The proto bridge is included by default (Go binaries are statically
+linked; there's no cost to unused code paths at runtime).
+
+```go
+import schemapb "github.com/7thplacenw/config/schemapb"
+
+msg := &schemapb.AppConfig{}
+proto.Unmarshal(protoBytes, msg)
+override := ProtoToMap(msg)  // respects HasField presence
+```
+
+`ProtoToMap()` uses `proto.HasExtension` and field descriptor
+reflection to extract only explicitly-set fields. This handles the
+proto3 zero-value problem (see `dev/GOLDEN_SCHEMA.md`).
+
+### Schema Generation
+
+The Golden Schema generates:
+
+- `schemapb/` package — protobuf Go stubs (via `protoc-gen-go`)
+- Struct definitions with tags can optionally be generated from
+  `FieldMeta` annotations.
+
 ## Packaging
 
 Published as a Go module:

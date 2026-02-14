@@ -157,10 +157,52 @@ SeventhPlaceError
 Validation errors include the field path and expected type but never
 include the raw value (to avoid leaking secrets in logs).
 
+## Bridge Integration
+
+The Python client supports both bridges:
+
+### JSON Bridge (Default)
+
+YAML/JSON files are parsed via `yaml.safe_load()` into `dict` and fed
+directly into the merge pipeline. This is the default path for local
+config files and REST-delivered configuration.
+
+### Protobuf Bridge (Optional)
+
+When the `protobuf` extra is installed (`pip install seventhplace[protobuf]`),
+the library accepts protobuf binary bytes from a control-plane or
+remote source. The flow:
+
+```python
+# protoc-generated stub
+from seventhplace.generated import config_pb2
+
+# Deserialize proto → extract present fields → dict → merge pipeline
+msg = config_pb2.AppConfig()
+msg.ParseFromString(proto_bytes)
+override = proto_to_dict(msg)  # only includes has_*() == True fields
+```
+
+`proto_to_dict()` checks `HasField()` / `ListFields()` to respect
+the presence semantics required by our merge model (see
+`dev/GOLDEN_SCHEMA.md` — proto3 zero-value problem).
+
+The protobuf dependency is optional. Teams using only local YAML files
+never import it.
+
+### Schema Generation
+
+The Golden Schema (`schema/proto/seventhplace/config.proto`) generates:
+
+- `src/seventhplace/generated/config_pb2.py` — protobuf stubs
+- The Pydantic models can also be generated from `FieldMeta` annotations,
+  though hand-written models are acceptable during early development.
+
 ## Packaging
 
 Published to PyPI as `seventhplace`. Installed via:
 
 ```
 pip install seventhplace
+pip install seventhplace[protobuf]   # with proto bridge support
 ```
