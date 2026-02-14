@@ -1,0 +1,223 @@
+# 7th Place NW — Architecture
+
+## Overview
+
+7thplace is a cross-platform Layered Configuration Manager. This repo
+(`7thplacenw-client`) provides idiomatic client libraries for five languages:
+Python, TypeScript, Go, C#, and C++.
+
+Two sibling repositories complete the ecosystem:
+
+- **control-plane** — orchestration, schema registry, remote config serving
+- **managed-services** — hosted infrastructure (feature flags, audit, etc.)
+
+The client libraries are intentionally standalone. They must function without
+the control plane or managed services; those integrations are additive.
+
+---
+
+## Core Problem
+
+Magic numbers and buried constants make code fragile, untestable, and opaque.
+Configuration should be:
+
+1. **Named** — `config.algo.friction`, never a bare `0.85`.
+2. **Typed** — a `float` field rejects `"five"` at load time, not mid-run.
+3. **Layered** — sensible defaults, overrideable by file, env, or CLI.
+4. **Immutable** — once loaded, the config object does not change.
+5. **Auditable** — you can inspect exactly which layer set each value.
+
+---
+
+## Foundational Concepts
+
+### The Waterfall (Precedence Order)
+
+Each layer overrides the one below it. Lower layers provide safety nets;
+higher layers provide flexibility.
+
+```
+Lowest priority                          Highest priority
+    |                                        |
+    v                                        v
+ Defaults  →  Config File  →  Env Vars  →  CLI Args
+```
+
+1. **Defaults** — Hardcoded in the schema struct/class. These are the
+   "algorithm-level" constants that would otherwise be magic numbers.
+2. **Config File** — YAML, TOML, or JSON. For structured, versioned settings.
+3. **Environment Variables** — Flat key-value. Best for secrets and CI/CD.
+   Uses the double-underscore (`__`) convention to represent nesting:
+   `MYAPP__ALGO__FRICTION` maps to `algo.friction`.
+4. **CLI Arguments** — The "final word" for a specific execution.
+
+### Schema-First Design
+
+Every implementation defines configuration as a **typed structure** (struct,
+class, dataclass, interface) with default values baked in. This structure IS
+the documentation of available knobs. Raw dictionaries and untyped maps are
+never exposed to consumer code.
+
+### Deep Merge
+
+When a higher-precedence layer provides a partial override of a nested
+section, it must overlay only the specified keys — not replace the entire
+subtree. Example:
+
+```yaml
+# Defaults define:           # File overrides only friction:
+algo:                         algo:
+  friction: 0.85                friction: 0.72
+  max_retries: 3
+  timeout_ms: 5000
+
+# Result:
+algo:
+  friction: 0.72       # overridden
+  max_retries: 3       # preserved
+  timeout_ms: 5000     # preserved
+```
+
+### Immutability
+
+After `load()` returns, the config object is frozen. No field may be mutated.
+This eliminates an entire class of concurrency bugs and makes the config safe
+to share across threads/goroutines/tasks without synchronization.
+
+---
+
+## API Contract
+
+Every language implementation must expose this surface:
+
+### Types
+
+| Concept          | Purpose                                              |
+|------------------|------------------------------------------------------|
+| **Schema**       | Typed struct/class with default values               |
+| **ConfigManager**| Entry point: orchestrates loading and merging        |
+| **Provider**     | A source of config data (file, env, CLI, remote)     |
+| **LoadResult**   | The frozen, validated config object                  |
+
+### Operations
+
+```
+ConfigManager
+  .add_provider(provider, priority)   // register a source
+  .load()                             // execute waterfall → validate → freeze
+  .get()                              // access the frozen config (post-load)
+```
+
+Providers are pluggable. The four built-in providers are:
+
+| Provider        | Reads From               | Nesting Strategy         |
+|-----------------|--------------------------|--------------------------|
+| DefaultProvider | Schema struct defaults    | Native struct fields     |
+| FileProvider    | YAML / TOML / JSON file  | Native nesting           |
+| EnvProvider     | `os.environ` / `getenv`  | `PREFIX__SECTION__KEY`   |
+| CLIProvider     | Argument parser          | Language-native flags    |
+
+### Validation
+
+Validation runs once, at load time. It checks:
+
+1. **Type correctness** — every field matches its declared type.
+2. **Constraints** — range, format, enum membership (where declared).
+3. **Required fields** — fields without defaults must be provided by some layer.
+
+If validation fails, `load()` returns a clear, structured error — never a
+partially-constructed config object.
+
+---
+
+## Security Constraints
+
+These are non-negotiable across all implementations:
+
+| Constraint                        | Rationale                              |
+|-----------------------------------|----------------------------------------|
+| No `eval()` or dynamic execution  | Prevents injection via config values   |
+| Sensitive field redaction          | `__repr__` / `toString` masks secrets  |
+| File permission checks (optional) | Warn on world-readable secret files    |
+| No secret values in error messages | Validation errors show key, not value  |
+| Path traversal protection          | FileProvider rejects `../../etc/passwd`|
+
+---
+
+## Performance Model
+
+Configuration loads once at startup. The hot path (reading values) must be
+zero-cost or near-zero-cost:
+
+| Phase     | Acceptable Cost | Strategy                              |
+|-----------|-----------------|---------------------------------------|
+| **Load**  | Milliseconds    | Parse files, merge dicts, validate    |
+| **Access**| Zero-cost       | Direct struct field access, no lookup |
+
+This means the load phase can use dynamic containers (dicts, JSON objects,
+maps) for merging, but the final output must be a **static, typed structure**.
+In C++ this means stack-allocated structs. In Go, plain structs. In C#,
+POCOs. The "JSON intermediate → static struct" pattern applies universally.
+
+---
+
+## Language Idiom Strategy
+
+Each implementation respects the native idioms of its language. We do NOT
+force a single API shape across all five languages. Instead, we maintain a
+shared **behavioral contract** (see `test/COMPLIANCE.md`) while allowing
+idiomatic divergence in API surface.
+
+| Language   | Schema Tool              | Merge Strategy                  | Key Idiom                    |
+|------------|--------------------------|----------------------------------|------------------------------|
+| Python     | Pydantic / dataclasses   | Recursive dict update            | `model_dump()` → merge → validate |
+| TypeScript | Interface + zod          | Recursive object spread          | Schema-as-type-guard         |
+| Go         | Struct + tags            | Reflect-based or manual merge    | Functional options / Viper   |
+| C#         | POCO + DataAnnotations   | Native `ConfigurationBuilder`    | `IOptions<T>` binding        |
+| C++        | Struct + nlohmann/json   | Recursive JSON merge → thaw      | JSON intermediate → stack struct |
+
+---
+
+## Repository Layout
+
+```
+7thplacenw-client/
+├── dev/                        # Repo-level architecture & design docs
+│   └── ARCHITECTURE.md         # (this file)
+├── test/                       # Cross-language compliance specs
+│   ├── COMPLIANCE.md           # Behavioral contract all impls must pass
+│   └── fixtures/               # Shared test data (YAML, JSON, env files)
+├── python/
+│   ├── dev/                    # Python-specific design docs
+│   ├── src/seventhplace/       # Source
+│   └── tests/                  # Tests
+├── typescript/
+│   ├── dev/
+│   ├── src/
+│   └── tests/
+├── go/
+│   ├── dev/
+│   └── ...                     # Go-idiomatic layout (no src/)
+├── csharp/
+│   ├── dev/
+│   ├── src/
+│   └── tests/
+└── cpp/
+    ├── dev/
+    ├── include/seventhplace/   # Public headers
+    ├── src/                    # Implementation
+    └── tests/
+```
+
+Each language directory is self-contained: it has its own build system,
+dependency manifest, and test runner. The repo-level `test/` directory holds
+the shared compliance specification and fixture data that all implementations
+must satisfy.
+
+---
+
+## Versioning
+
+All five libraries share a single version number. A release of `v1.2.0` means
+all five languages implement the `v1.2.0` compliance spec. If a language
+implementation lags, it is not released until it catches up.

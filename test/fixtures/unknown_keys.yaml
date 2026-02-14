@@ -1,0 +1,3 @@
+algo:
+  friction: 0.72
+  nonexistent_param: 42
