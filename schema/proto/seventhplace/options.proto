@@ -1,0 +1,47 @@
+// Configuration field metadata extensions.
+//
+// These custom options annotate proto fields with config-specific
+// semantics that proto3 does not natively support: default values,
+// constraints, and sensitivity markers.
+
+syntax = "proto3";
+
+package seventhplace;
+
+import "google/protobuf/descriptor.proto";
+
+option go_package = "github.com/7thplacenw/config/schemapb";
+
+extend google.protobuf.FieldOptions {
+  FieldMeta config = 50000;
+}
+
+message FieldMeta {
+  // Default value, serialized as a string (e.g., "0.85", "localhost").
+  // Parsed according to the field's proto type at codegen time.
+  string default_value = 1;
+
+  // If true, this field's value is redacted in logs, repr, and toString.
+  bool sensitive = 2;
+
+  // If true, at least one layer must provide a value for this field.
+  // (Proto3 has no native "required" — this restores that semantic.)
+  bool required = 3;
+
+  // Inclusive minimum. Applies to numeric fields.
+  string min = 4;
+
+  // Inclusive maximum. Applies to numeric fields.
+  string max = 5;
+
+  // Human-readable description. Propagated to JSON Schema "description"
+  // and per-language doc comments.
+  string description = 6;
+
+  // Regex pattern constraint. Applies to string fields.
+  string pattern = 7;
+
+  // Allowed values for string fields (enum-like constraint without
+  // defining a proto enum). Comma-separated.
+  string allowed_values = 8;
+}

@@ -1,0 +1,13 @@
+app_name: "override-all"
+env: "staging"
+algo:
+  friction: 0.50
+  max_retries: 10
+  timeout_ms: 30000
+  threshold: 0.90
+db:
+  host: "db.staging.internal"
+  port: 9999
+  pool_size: 50
+secrets:
+  api_key: "sk-test-override"
