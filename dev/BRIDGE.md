@@ -275,6 +275,71 @@ include the protobuf library. The JSON bridge is the baseline.
 
 ---
 
+## Environment Variable Convention
+
+### Prefix Semantics
+
+The `EnvProvider` accepts a **bare prefix** string (e.g., `"SEVENTHPLACE"`).
+The library appends `__` internally when scanning environment variables.
+Users never pass the trailing double-underscore.
+
+| API Call                              | Scans For                         |
+|---------------------------------------|-----------------------------------|
+| `EnvProvider(prefix="SEVENTHPLACE")`  | `SEVENTHPLACE__*`                 |
+| `EnvProvider(prefix="MYAPP")`         | `MYAPP__*`                        |
+
+The default prefix is `"SEVENTHPLACE"` (producing `SEVENTHPLACE__*` on
+the wire).
+
+### Nesting Convention
+
+Double-underscore (`__`) separates nesting levels. The prefix itself is
+stripped, then the remaining segments map to the config hierarchy:
+
+```
+SEVENTHPLACE__ALGO__FRICTION=0.72
+│              │     │
+│              │     └─ field: friction
+│              └─────── section: algo
+└────────────────────── prefix (stripped)
+
+→ {"algo": {"friction": 0.72}}
+```
+
+**C# note:** .NET's `AddEnvironmentVariables` accepts the full prefix
+including the trailing `__` (e.g., `"SEVENTHPLACE__"`). This is a .NET
+convention — the C# implementation wraps it so the public API still
+accepts the bare prefix. Internally, it appends `__` before passing to
+the .NET configuration builder.
+
+### Type Coercion from Environment Variables
+
+Environment variables are always strings. The `EnvProvider` must coerce
+them to the target field's type. The coercion strategy is
+language-idiomatic but must produce identical results:
+
+| Target Type | Coercion Rule                                      | Example              |
+|-------------|----------------------------------------------------|----------------------|
+| `int`       | Parse as integer. Reject non-numeric strings.      | `"5432"` → `5432`   |
+| `float`     | Parse as floating point. Reject non-numeric.       | `"0.85"` → `0.85`   |
+| `bool`      | Accept `"true"/"false"` (case-insensitive).        | `"true"` → `true`   |
+| `string`    | Use as-is. No coercion needed.                     | `"hello"` → `"hello"`|
+
+**Per-language mechanisms:**
+
+| Language   | Mechanism                    | Detail                            |
+|------------|------------------------------|-----------------------------------|
+| Python     | `yaml.safe_load(value)`      | Handles int, float, bool, string  |
+| TypeScript | `JSON.parse(value)` fallback | Parse attempt; fall back to string|
+| Go         | `strconv` functions          | Based on target field type via reflection |
+| C#         | Native .NET binding          | `ConfigurationBuilder` handles it |
+| C++        | `std::stoi` / `std::stod`   | Parse attempt; bool special-cased |
+
+All mechanisms must reject obviously invalid coercions (e.g., `"hello"`
+for an `int` field) with a validation error at load time.
+
+---
+
 ## Integration with the Waterfall
 
 The bridge does NOT replace the waterfall. It feeds INTO it. Multiple

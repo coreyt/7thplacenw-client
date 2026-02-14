@@ -28,7 +28,7 @@ go/
 ├── errors.go                  # Typed sentinel errors
 ├── sensitive.go               # Sensitive field redaction
 ├── config_test.go             # Unit tests
-├── compliance_test.go         # Compliance suite (TC-01..TC-18)
+├── compliance_test.go         # Compliance suite (TC-01..TC-20)
 ├── go.mod
 ├── go.sum
 └── Makefile
@@ -205,11 +205,13 @@ proto3 zero-value problem (see `dev/GOLDEN_SCHEMA.md`).
 
 ### Schema Generation
 
-The Golden Schema generates:
+The Golden Schema will eventually generate (deferred to v0.2):
 
 - `schemapb/` package — protobuf Go stubs (via `protoc-gen-go`)
-- Struct definitions with tags can optionally be generated from
-  `FieldMeta` annotations.
+- Struct definitions with tags generated from `FieldMeta` annotations
+
+For v0.1, the Go structs with tags are hand-written. The `.proto` file is
+the canonical reference for keeping them in sync across languages.
 
 ## Packaging
 

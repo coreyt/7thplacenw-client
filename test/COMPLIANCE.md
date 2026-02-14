@@ -263,6 +263,51 @@ config.algo.max_retries == 3            # default preserved
 
 ---
 
+### TC-19: CLI Overrides Env
+
+**Given:**
+- Env var `SEVENTHPLACE__ALGO__FRICTION=0.60`
+- CLI argument equivalent to `--algo.friction=0.50`
+  (exact flag syntax is language-specific)
+
+**When:** `load()` with env and CLI layers active.
+**Then:** CLI wins over env.
+
+```
+config.algo.friction == 0.50    # CLI is highest priority
+```
+
+Remove CLI arg, reload:
+
+```
+config.algo.friction == 0.60    # env wins when CLI absent
+```
+
+This test completes the full precedence waterfall (defaults < file < env < CLI)
+that TC-13 covers only partially.
+
+---
+
+### TC-20: Enum Validation
+
+**Given:** Fixture file `test/fixtures/invalid_enum.yaml` contains:
+```yaml
+env: "INVALID_VALUE"
+```
+
+**When:** `load(file="invalid_enum.yaml")` is called.
+**Then:** `load()` returns a validation error. The error message must
+identify the field (`env`) and the valid values (`DEV`, `STAGING`,
+`PRODUCTION`). The invalid value should not be included if the field
+were marked sensitive (it is not sensitive in this case, so including
+it is acceptable).
+
+**Note:** Implementations that use string-typed `env` fields (rather
+than language-native enums) satisfy this test by validating against
+an allowed-values list at load time.
+
+---
+
 ## Fixture Inventory
 
 | File                         | Contents                                  |
@@ -273,13 +318,18 @@ config.algo.max_retries == 3            # default preserved
 | `empty.yaml`                 | (empty file)                              |
 | `full_override.yaml`         | All fields specified with non-default values |
 | `type_mismatch.yaml`         | `db: { port: "not_a_number" }`            |
+| `invalid_enum.yaml`          | `env: "INVALID_VALUE"`                    |
 
 ---
 
 ## Env Var Prefix
 
-All compliance tests use the prefix `SEVENTHPLACE__`. Implementations must
-allow the prefix to be configurable, but default to `SEVENTHPLACE__`.
+All compliance tests use the default prefix `SEVENTHPLACE`. The library
+appends `__` internally — environment variables on the wire use the form
+`SEVENTHPLACE__SECTION__KEY`. Implementations must allow the prefix to
+be configurable via the `EnvProvider` API (accepting a bare prefix string,
+never the trailing `__`). See `dev/BRIDGE.md` § Environment Variable
+Convention for the full specification.
 
 ---
 

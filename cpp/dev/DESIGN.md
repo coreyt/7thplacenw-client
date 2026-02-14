@@ -36,7 +36,7 @@ cpp/
 │   ├── providers.cpp
 │   └── sensitive.cpp
 ├── tests/
-│   ├── compliance_test.cpp        # TC-01..TC-18
+│   ├── compliance_test.cpp        # TC-01..TC-20
 │   ├── merge_test.cpp
 │   └── providers_test.cpp
 ├── CMakeLists.txt
@@ -291,11 +291,15 @@ headers or libraries are needed.
 
 ### Schema Generation
 
-The Golden Schema generates:
+The Golden Schema will eventually generate (deferred to v0.2):
 
 - `generated/config.pb.h` / `config.pb.cc` — protobuf C++ stubs
-- Struct definitions with `NLOHMANN_DEFINE` macros can optionally be
-  generated from `FieldMeta` annotations.
+- Struct definitions with `NLOHMANN_DEFINE` macros generated from
+  `FieldMeta` annotations
+
+For v0.1, the C++ structs and nlohmann macros are hand-written. The
+`.proto` file is the canonical reference for keeping them in sync across
+languages.
 
 ## Build & Package
 

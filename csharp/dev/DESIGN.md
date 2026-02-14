@@ -43,7 +43,7 @@ csharp/
 ├── tests/
 │   └── SeventhPlace.Config.Tests/
 │       ├── SeventhPlace.Config.Tests.csproj
-│       ├── ComplianceTests.cs     # TC-01..TC-18
+│       ├── ComplianceTests.cs     # TC-01..TC-20
 │       ├── ValidatorTests.cs
 │       └── PathGuardTests.cs
 ├── SeventhPlace.Config.sln
@@ -110,7 +110,7 @@ without additional work.
 var config = SeventhPlace.Config.ConfigManager.Load<AppConfig>(options =>
 {
     options.AddYamlFile("config.yaml", optional: true);
-    options.AddEnvironmentVariables("SEVENTHPLACE__");
+    options.AddEnvironmentVariables("SEVENTHPLACE");
     options.AddCommandLine(args);
     options.Strict = true;
 });
@@ -122,7 +122,7 @@ Internally:
 ConfigurationBuilder
   .AddInMemoryCollection(defaults)     // from record defaults
   .AddYamlFile(path, optional)         // file layer
-  .AddEnvironmentVariables(prefix)     // env layer (__  nesting is native)
+  .AddEnvironmentVariables(prefix + "__")  // env layer (__ nesting is native)
   .AddCommandLine(args)                // CLI layer
   .Build()
   ↓
@@ -145,9 +145,11 @@ We do NOT reimplement deep merge — the framework handles it correctly.
 
 ### Env Variable Mapping
 
-.NET's `AddEnvironmentVariables("SEVENTHPLACE__")` already maps
-`SEVENTHPLACE__ALGO__FRICTION` to `Algo:Friction` natively. The
-double-underscore-to-colon mapping is a built-in .NET convention.
+.NET's native `AddEnvironmentVariables` expects the full prefix including
+the trailing `__`. Our public API accepts the bare prefix (`"SEVENTHPLACE"`)
+for consistency with other languages, and appends `__` internally before
+passing to the .NET configuration builder. The double-underscore-to-colon
+mapping is a built-in .NET convention.
 
 This is why C# is the most "batteries included" implementation.
 
@@ -226,10 +228,13 @@ package `SeventhPlace.Config.Proto` provides the bridge.
 
 ### Schema Generation
 
-The Golden Schema generates:
+The Golden Schema will eventually generate (deferred to v0.2):
 
 - `Generated/ConfigProto.cs` — protobuf C# stubs (via `protoc --csharp_out`)
-- Record types can optionally be generated from `FieldMeta` annotations.
+- Record types generated from `FieldMeta` annotations
+
+For v0.1, the C# records with attributes are hand-written. The `.proto`
+file is the canonical reference for keeping them in sync across languages.
 
 ## Packaging
 

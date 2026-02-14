@@ -28,14 +28,14 @@ typescript/
 │   ├── merge.ts               # deepMerge() utility
 │   ├── providers/
 │   │   ├── index.ts
-│   │   ├── defaults.ts        # DefaultsProvider
+│   │   ├── defaults.ts        # DefaultProvider
 │   │   ├── file.ts            # FileProvider (YAML/JSON)
 │   │   ├── env.ts             # EnvProvider (process.env)
 │   │   └── cli.ts             # CLIProvider (process.argv)
 │   ├── schema.ts              # Schema helpers, sensitive() marker
 │   └── errors.ts              # Typed error classes
 ├── tests/
-│   ├── compliance.test.ts     # Maps to test/COMPLIANCE.md TC-01..TC-18
+│   ├── compliance.test.ts     # Maps to test/COMPLIANCE.md TC-01..TC-20
 │   ├── merge.test.ts
 │   └── providers.test.ts
 ├── package.json
@@ -217,10 +217,14 @@ local-only usage.
 
 ### Schema Generation
 
-The Golden Schema generates:
+The Golden Schema will eventually generate (deferred to v0.2):
 
-- `src/generated/config_pb.ts` — protobuf stubs (via `buf generate`)
+- `src/generated/config_pb.ts` — protobuf stubs (via `protoc --ts_out`
+  or `buf generate` — tooling decision deferred)
 - Zod schemas can optionally be generated from `FieldMeta` annotations.
+
+For v0.1, the zod schemas are hand-written. The `.proto` file is the
+canonical reference for keeping them in sync across languages.
 
 ## Packaging
 

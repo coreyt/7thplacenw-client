@@ -16,6 +16,54 @@ the control plane or managed services; those integrations are additive.
 
 ---
 
+## v0.1 Scope
+
+The architecture describes the full vision. v0.1 delivers the **local
+configuration core** — enough to replace magic numbers with typed,
+layered, immutable config in all five languages.
+
+### In Scope (v0.1)
+
+| Feature                  | Detail                                         |
+|--------------------------|-------------------------------------------------|
+| DefaultProvider          | Schema struct defaults as the base layer        |
+| FileProvider             | YAML/JSON files via the JSON bridge             |
+| EnvProvider              | `PREFIX__SECTION__KEY` mapping with type coercion |
+| CLIProvider              | Language-native argument parsing                |
+| Deep merge               | Partial overrides preserve sibling keys         |
+| Validation               | Type checking + constraint enforcement at load  |
+| Immutability             | Frozen config objects post-load                 |
+| Sensitive field redaction| Secrets masked in repr/toString/print           |
+| Security                 | Path traversal protection, no eval, no leaks    |
+| Compliance suite         | All TC-01 through TC-20 passing in all languages|
+| Hand-written schemas     | Per-language typed config classes written by hand|
+
+### Deferred (v0.2+)
+
+| Feature                  | Rationale                                       |
+|--------------------------|-------------------------------------------------|
+| Protobuf bridge          | Requires proto stubs + codegen pipeline          |
+| RemoteProvider           | Depends on control-plane (separate repo)        |
+| Code generation pipeline | Build hand-written implementations first, then automate |
+| JSON Schema generation   | Nice-to-have; editors work fine with typed schemas |
+| Buf / protoc tooling     | Decision deferred until codegen is in scope      |
+| Schema repo extraction   | Only needed when control-plane consumes the schema |
+
+### Reference Implementation Order
+
+Python is the reference implementation. It will be completed first and
+used to validate the compliance suite. The remaining languages follow
+in this order: TypeScript, Go, C#, C++. Each language must pass the
+full compliance suite before the next one begins.
+
+**Rationale:** Python + Pydantic provides the fastest iteration cycle.
+Pydantic handles validation, immutability, and sensitive field redaction
+natively, letting us focus on the merge pipeline and provider logic.
+Once the compliance suite is proven against Python, other languages
+implement against a known-good behavioral spec.
+
+---
+
 ## Core Problem
 
 Magic numbers and buried constants make code fragile, untestable, and opaque.
@@ -182,7 +230,9 @@ corrupts results. No concurrency hazards from config mutation.
 
 ## API Contract
 
-Every language implementation must expose this surface:
+Every language implementation must expose this **behavioral** surface.
+The exact syntax varies by language idiom (see Language Idiom Strategy
+below), but the concepts are constant.
 
 ### Types
 
@@ -195,12 +245,21 @@ Every language implementation must expose this surface:
 
 ### Operations
 
-```
-ConfigManager
-  .add_provider(provider, priority)   // register a source
-  .load()                             // execute waterfall → validate → freeze
-  .get()                              // access the frozen config (post-load)
-```
+The load operation combines providers in waterfall order, validates,
+and freezes. The API shape is idiomatic per language:
+
+| Language   | Load API Style                                  |
+|------------|--------------------------------------------------|
+| Python     | `ConfigManager().add_provider(...).load()`       |
+| TypeScript | `ConfigManager().addProvider(...).load()`        |
+| Go         | `seventhplace.Load[T](...functional options)`    |
+| C#         | `ConfigManager.Load<T>(options => { ... })`      |
+| C++        | `seventhplace::load<T>(...functional options)`   |
+
+All five converge on the same pipeline: **register sources → merge →
+validate → freeze → return typed object**. The behavioral contract
+(test/COMPLIANCE.md) is the authoritative specification, not the API
+shape.
 
 Providers are pluggable. The built-in providers are:
 

@@ -29,7 +29,7 @@ python/
 │       ├── merge.py           # deep_merge() utility
 │       ├── providers/
 │       │   ├── __init__.py
-│       │   ├── defaults.py    # DefaultsProvider (from schema)
+│       │   ├── defaults.py    # DefaultProvider (from schema)
 │       │   ├── file.py        # FileProvider (YAML/JSON/TOML)
 │       │   ├── env.py         # EnvProvider (PREFIX__KEY mapping)
 │       │   └── cli.py         # CLIProvider (argparse integration)
@@ -37,7 +37,7 @@ python/
 │       └── errors.py          # Typed exceptions
 ├── tests/
 │   ├── conftest.py            # Shared fixtures, env cleanup
-│   ├── test_compliance.py     # Maps to test/COMPLIANCE.md TC-01..TC-18
+│   ├── test_compliance.py     # Maps to test/COMPLIANCE.md TC-01..TC-20
 │   ├── test_merge.py          # Unit tests for deep_merge
 │   └── test_providers.py      # Unit tests per provider
 ├── pyproject.toml
@@ -192,11 +192,14 @@ never import it.
 
 ### Schema Generation
 
-The Golden Schema (`schema/proto/seventhplace/config.proto`) generates:
+The Golden Schema (`schema/proto/seventhplace/config.proto`) will
+eventually generate (deferred to v0.2):
 
 - `src/seventhplace/generated/config_pb2.py` — protobuf stubs
-- The Pydantic models can also be generated from `FieldMeta` annotations,
-  though hand-written models are acceptable during early development.
+- Pydantic models generated from `FieldMeta` annotations
+
+For v0.1, the Pydantic models are hand-written. The `.proto` file is the
+canonical reference for keeping them in sync across languages.
 
 ## Packaging
 

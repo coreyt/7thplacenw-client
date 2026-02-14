@@ -325,9 +325,9 @@ message SecretsConfig {
 }
 ```
 
-### What the Golden Schema Generates
+### What the Golden Schema Generates (Target State)
 
-From this single `.proto` file, the build pipeline produces:
+From this single `.proto` file, the build pipeline will eventually produce:
 
 ```
 seventhplace/config.proto
@@ -350,6 +350,24 @@ The **custom generators** read the `FieldMeta` annotations and produce
 the language-specific config classes WITH defaults, constraints, and
 sensitivity annotations baked in. The protobuf stubs handle the wire
 format; the config classes handle the application-level semantics.
+
+### v0.1: Hand-Written Schema Classes
+
+For v0.1, per-language typed config classes are **hand-written**, not
+generated. The `.proto` file serves as the canonical specification that
+humans read to ensure all five languages define structurally equivalent
+schemas with identical defaults and constraints.
+
+The codegen pipeline (custom generators, protoc stubs) is deferred to
+v0.2. This avoids a bootstrapping dependency: we prove the design works
+with hand-written code first, then automate the generation.
+
+**Keeping hand-written schemas in sync:**
+- The `.proto` file is the reference. When adding or changing a config
+  field, update `config.proto` first, then update each language's schema.
+- The compliance test suite (TC-01: Defaults Only) catches any drift —
+  if a language's defaults differ from the spec, TC-01 fails.
+- Code review should cross-reference schema changes against the proto.
 
 ### Two Paths, Same Object
 
@@ -430,22 +448,29 @@ This is a one-time tooling investment.
 
 ---
 
-## Open Questions
+## Open Questions (Resolved)
 
-1. **Buf vs. raw protoc?** The Buf CLI (`buf.build`) offers linting,
-   breaking-change detection, and a schema registry. Worth evaluating
-   for the codegen pipeline.
+These questions were raised during design and have been resolved:
+
+1. **Buf vs. raw protoc?** — **Deferred to v0.2.** The codegen pipeline
+   is not in v0.1 scope. When it is, evaluate Buf for its linting and
+   breaking-change detection. Until then, the `.proto` files are
+   human-read specifications, not build inputs.
 
 2. **Should the Golden Schema live in this repo or a shared schema repo?**
-   If the control-plane and managed-services repos also consume it, a
-   shared `7thplacenw-schema` repo avoids duplication.
+   — **This repo, for now.** The control-plane and managed-services repos
+   do not exist yet. Extract to a shared `7thplacenw-schema` repo when
+   the first consumer outside this repo needs it. Premature extraction
+   adds coordination cost with no benefit.
 
-3. **Custom protoc plugin or standalone generator?** The custom options
-   need extraction tooling. A `protoc` plugin integrates into the
-   existing pipeline; a standalone generator (reading the proto
-   descriptor set) is easier to debug.
+3. **Custom protoc plugin or standalone generator?** — **Deferred to v0.2.**
+   v0.1 uses hand-written schema classes. When codegen is in scope, a
+   standalone generator reading the proto descriptor set is preferred —
+   easier to debug, test, and CI-integrate than a protoc plugin.
 
-4. **Proto2 vs. Proto3?** Proto2 has native `default` and `required`
-   keywords, which map more naturally to configuration. The tradeoff
-   is that proto2 is considered legacy. Custom options on proto3 are
-   the modern equivalent.
+4. **Proto2 vs. Proto3?** — **Proto3 with `optional` keyword.** Proto3 is
+   the current standard. The `optional` keyword (available since 3.15)
+   gives us presence semantics (`has_*()` accessors) that solve the
+   zero-value problem. Proto2's native `default` and `required` are
+   replicated by our `FieldMeta` custom options. No reason to use a
+   legacy format.

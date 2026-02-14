@@ -1,0 +1,2 @@
+# TC-20: Invalid enum value — should fail validation
+env: "INVALID_VALUE"
