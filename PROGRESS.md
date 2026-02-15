@@ -2,10 +2,24 @@
 
 ## Current Phase
 
-**v0.1: Local Configuration Core — Pre-implementation**
+**v0.1: Partial implementation (Python + TypeScript implemented, Go/C#/C++ pending)**
 
-Design is complete. No implementation code exists yet. Next step:
-Python reference implementation.
+The repository is no longer in pre-implementation state. Python and
+TypeScript contain working implementations with passing compliance tests.
+Go, C#, and C++ currently contain project scaffolding/design docs but no
+runtime implementation code.
+
+---
+
+## Current-Status Matrix (True State)
+
+| Language | Implemented | Test Status | Blockers / Notes |
+|----------|-------------|-------------|------------------|
+| Python | ✅ Yes — package code present under `python/src/seventhplace/` (manager, providers, schema, errors, merge) | ✅ `PYTHONPATH=src pytest -q` → 20/20 passing | Needs packaging/test runner ergonomics to avoid requiring manual `PYTHONPATH` during local runs. |
+| TypeScript | ✅ Yes — package code present under `typescript/src/` (manager, providers, schema, errors, merge) | ✅ `npm test -- --run` → 20/20 passing | No functional blocker observed; only npm env warning in this environment (`http-proxy`). |
+| Go | ❌ No — only `go.mod`, `go.sum`, and design doc present | ⚠️ `go test ./...` reports no packages | No Go source packages or tests created yet. |
+| C# | ❌ No — solution + `.csproj` scaffolding present, no library/test source files | ⚠️ Not runnable here (`dotnet` CLI unavailable in environment) | Implementation not started; environment also missing `dotnet` toolchain. |
+| C++ | ❌ No — `CMakeLists.txt` + empty `include/src/tests` directories (`.gitkeep`) | ⚠️ CMake configure failed in this environment during dependency fetch | Implementation files referenced by CMake are missing; additionally, FetchContent GitHub downloads are blocked in this environment. |
 
 ---
 
@@ -16,7 +30,6 @@ Python reference implementation.
 - [x] Core architecture document (`dev/ARCHITECTURE.md`)
 - [x] Three-tier design: Golden Schema, Bridge, Client Consumption
 - [x] v0.1 scope defined (in-scope vs deferred features)
-- [x] Reference implementation order: Python first, then TS/Go/C#/C++
 - [x] Golden Schema proto files (`schema/proto/seventhplace/`)
   - [x] `options.proto` — FieldMeta custom options (defaults, constraints, sensitivity)
   - [x] `config.proto` — AppConfig with AlgoConfig, DbConfig, SecretsConfig
@@ -33,88 +46,65 @@ Python reference implementation.
   - [x] override_flat.yaml, override_nested.yaml, unknown_keys.yaml
   - [x] empty.yaml, full_override.yaml, type_mismatch.yaml, invalid_enum.yaml
 - [x] Per-language high-level designs (5x `<lang>/dev/DESIGN.md`)
-- [x] All open design questions resolved (see `dev/GOLDEN_SCHEMA.md`)
-- [x] Cross-document consistency audit and fixes
 - [x] User needs and requirements documented (`dev/USER_NEEDS.md`, `dev/REQUIREMENTS.md`)
 - [x] Agent onboarding file (`CLAUDE.md`)
 
-### Key Design Decisions Made
+### Milestone: Implementations Completed
 
-| Decision | Resolution |
-|----------|-----------|
-| v0.1 scope | Local config core only (4 providers, JSON bridge) |
-| Schema strategy | Hand-written per language; proto is the spec |
-| Reference language | Python (Pydantic carries validation/immutability) |
-| Env prefix API | Bare prefix (`"SEVENTHPLACE"`), library appends `__` |
-| Proto version | Proto3 with `optional` keyword for presence |
-| Schema location | This repo (extract when control-plane needs it) |
-| Codegen tooling | Deferred to v0.2; standalone generator preferred |
+- [x] Python v0.1 implementation
+  - [x] Package modules under `python/src/seventhplace/`
+  - [x] Compliance test suite (`python/tests/test_compliance.py`) passing (TC-01..TC-20)
+- [x] TypeScript v0.1 implementation
+  - [x] Package modules under `typescript/src/`
+  - [x] Compliance test suite (`typescript/tests/compliance.test.ts`) passing (TC-01..TC-20)
 
 ---
 
 ## In Progress
 
-Nothing currently in progress. Ready to begin v0.1 implementation.
+- [ ] Go implementation
+- [ ] C# implementation
+- [ ] C++ implementation
 
 ---
 
-## Next Up (v0.1 Implementation)
+## Next Up (v0.1 Remaining Work)
 
-### Python Reference Implementation
-- [ ] `src/seventhplace/merge.py` — `deep_merge()` utility
-- [ ] `src/seventhplace/errors.py` — Exception hierarchy
-- [ ] `src/seventhplace/schema.py` — Base schema utilities
-- [ ] `src/seventhplace/providers/defaults.py` — DefaultProvider
-- [ ] `src/seventhplace/providers/file.py` — FileProvider (YAML/JSON + path guard)
-- [ ] `src/seventhplace/providers/env.py` — EnvProvider (prefix mapping + coercion)
-- [ ] `src/seventhplace/providers/cli.py` — CLIProvider (argparse)
-- [ ] `src/seventhplace/manager.py` — ConfigManager (orchestrates load pipeline)
-- [ ] `tests/test_compliance.py` — TC-01 through TC-20
-- [ ] `tests/test_merge.py` — deep_merge unit tests
-- [ ] `tests/test_providers.py` — Per-provider unit tests
-- [ ] `pyproject.toml` — Dependencies, build config
-- [ ] `Makefile` — test-compliance-python target
+### Go
+- [ ] Create runtime package(s) and exported config API
+- [ ] Implement providers: defaults, file, env, CLI
+- [ ] Implement merge + schema validation
+- [ ] Add and pass compliance suite (TC-01..TC-20)
 
-### Subsequent Language Implementations
-- [ ] TypeScript (zod + js-yaml, vitest)
-- [ ] Go (struct tags + yaml.v3, go-playground/validator)
-- [ ] C# (.NET ConfigurationBuilder, xUnit)
-- [ ] C++ (nlohmann/json + yaml-cpp, Catch2)
+### C#
+- [ ] Implement library source under `csharp/src/SeventhPlace.Config/`
+- [ ] Implement providers + manager + typed config models
+- [ ] Add and pass compliance suite in `csharp/tests/`
+
+### C++
+- [ ] Create implementation files referenced by `cpp/CMakeLists.txt`
+- [ ] Implement providers + manager + typed config structs
+- [ ] Add and pass compliance/unit tests under `cpp/tests/`
 
 ### Cross-Language
 - [ ] Root Makefile with `test-compliance-*` targets
 - [ ] CI pipeline (run all compliance suites)
+- [ ] Keep status documents (`PROGRESS.md`, `CLAUDE.md`) aligned with reality
 
 ---
 
 ## Future Work (v0.2+)
 
-These items are designed but explicitly deferred. The architecture and
-design docs describe them in detail — they are not lost, just not in
-the v0.1 implementation scope.
+These items remain deferred by design.
 
 ### Protobuf Bridge (v0.2)
 
-Enables machine-to-machine config transport (control-plane to client,
-cross-service sync, audit snapshots). Design is in `dev/BRIDGE.md` §
-Protobuf Bridge and `dev/GOLDEN_SCHEMA.md` § The Solution.
-
 - [ ] Generate protobuf stubs for all 5 languages from `config.proto`
-- [ ] Implement `proto_to_dict()` / `ProtoToMap()` with `has_*()` presence
-      checking to solve the proto3 zero-value problem
+- [ ] Implement `proto_to_dict()` / `ProtoToMap()` with presence checking
 - [ ] Add protobuf bridge as optional dependency per language
-  - Python: `pip install seventhplace[protobuf]`
-  - TypeScript: `@bufbuild/protobuf` peer dep
-  - Go: built-in (static linking, no cost)
-  - C#: `SeventhPlace.Config.Proto` NuGet package
-  - C++: `SEVENTHPLACE_ENABLE_PROTO` CMake option
 - [ ] Add compliance tests for proto round-trip and presence semantics
 
 ### RemoteProvider (v0.2)
-
-Sits between File and Env in the waterfall. Fetches config from the
-control-plane via the protobuf bridge. Design is in `dev/ARCHITECTURE.md`
-§ The Waterfall.
 
 - [ ] Define RemoteProvider API in each language HLD
 - [ ] Implement polling / streaming config fetch
@@ -123,44 +113,19 @@ control-plane via the protobuf bridge. Design is in `dev/ARCHITECTURE.md`
 
 ### Code Generation Pipeline (v0.2)
 
-Automates the hand-written schemas. Design is in `dev/GOLDEN_SCHEMA.md`
-§ What the Golden Schema Generates.
-
-- [ ] Decide: Buf vs raw protoc (evaluate Buf's linting + breaking-change detection)
-- [ ] Build standalone generator that reads proto descriptor set + FieldMeta
-- [ ] Generate per-language typed config classes:
-  - Python: Pydantic `BaseModel` with `frozen=True`
-  - TypeScript: zod schema with `.default()` values
-  - Go: struct with `yaml`, `env`, `validate`, `default` tags
-  - C#: `record` with `DataAnnotation` attributes
-  - C++: struct with `NLOHMANN_DEFINE` macros
-- [ ] Generate JSON Schema from FieldMeta (editor autocomplete, CI validation)
-- [ ] Generate default values YAML file
-- [ ] Generate documentation from `FieldMeta.description`
+- [ ] Decide: Buf vs raw protoc
+- [ ] Build standalone generator from descriptor set + FieldMeta
+- [ ] Generate per-language typed config classes
+- [ ] Generate JSON Schema, default values file, and docs
 
 ### Schema Repository Extraction (v0.2+)
 
-When the control-plane and managed-services repos need to consume the
-Golden Schema, extract `schema/proto/` to a shared `7thplacenw-schema`
-repo. Until then, it stays here to avoid coordination overhead.
-
-### Additional Future Considerations
-
-- **Hot-reload API** — Explicit opt-in reload that produces a new frozen
-  config object (old one remains valid for code still referencing it).
-  Mentioned in `dev/GOLDEN_SCHEMA.md` § Load-Once, Read-Many.
-- **TOML file support** — FileProvider currently handles YAML and JSON.
-  TOML may be added later (mentioned in `dev/BRIDGE.md`).
-- **Lazy section loading** — For large configs, load sections on demand
-  to reduce startup time (mentioned in `dev/GOLDEN_SCHEMA.md`).
-- **File permission checks** — Warn on world-readable secret files
-  (mentioned in `dev/ARCHITECTURE.md` § Security Constraints as optional).
+- [ ] Extract `schema/proto/` to shared schema repo when other repos depend on it
 
 ---
 
 ## Known Issues
 
-- `README.md` documentation table still references TC-01..TC-18 (should
-  be TC-01..TC-20) — fix pending
-- No CI pipeline configured yet
-- No root Makefile with cross-language test targets
+- `CLAUDE.md` currently still describes the project as pre-implementation and should be updated.
+- No CI pipeline configured yet.
+- No root Makefile with cross-language test targets.
